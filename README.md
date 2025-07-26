@@ -18,7 +18,7 @@ An Among Us tool created with Python that allows bypassing settings limits in lo
 ## 📱 Android
 0️⃣. Go to /storage/emulated/0/Android/data/com.innersloth.spacemafia/files/ path in your android file explorer (if your explorer doesn't allow you to go to the "data" folder, install an external explorer from google play market or whatever and give it permission to view system folders). Now backup the "settings.amogus" file to another folder (that is needed for you to recover the file if you mess up with base64. You can still reinstall the game if you don't create one).
 
-1️⃣. Install a Python IDE for android that supports pip such as Pydroid. Then go to [releases](https://github.com/Zaxerf1234/AmongUsLimitBypasser/releases) tab, choose release that fits your Among Us version and download "Source code (zip)". It will download you a zip file with the source code. Now open your IDE console and run: 
+1️⃣. Install a Python IDE for android that supports pip such as Pydroid. Then go to [releases](https://github.com/Zaxerf1234/AmongUsLimitBypasser/releases) tab, choose release that fits your Among Us version (note: releases for older versions won't be supported if there's a completely new hex arrangement in the new versions) and download "Source code (zip)". It will download you a zip file with the source code. Now open your IDE console and run: 
 ```bash
 cd insert_path_to_the_folder_here
 ```
