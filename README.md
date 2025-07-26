@@ -37,3 +37,24 @@ pip install colorama pyfiglet
 4️⃣. After you've done, copy the base64 output and go to /storage/emulated/0/Android/data/com.innersloth.spacemafia/files/ path again. Open "settings.amogus" file with any text editor and paste your base64 into "normalHostOptions" value or "hideNSeekHostOptions" depending on what generator mode you used (note: if you want to edit hex settings manually, you can copy the hex value output and edit it in a hex editor and then use "Encode modified hex to Base64" option in the program menu (3) to encode it back). Make sure Among Us is closed at that moment!
 
 5️⃣. Launch the game and host a local or online lobby to see the changes. Enjoy!
+
+## 💻📳 MacOS, iOS
+No data.
+
+If you know how to modify settings on following platforms, feel free to open an issue and tell me there!
+
+
+# ✅ FAQ
+In this section you can find answers for frequently asked questions and issues with the tool.
+
+## Q: Is this program a virus?
+A: No.
+
+## Q: Can I customize role settings with this tool?
+A: Currently, you **can't** customize role settings, only basic ones. But I'm working on this feature and it will appear in the future updates.
+
+## Q: There's no "settings.amogus" file. What do I do?
+A: Make sure you have launched the game and created a room at least once. Then try again.
+
+## Q: Does this work on cracked version of Among Us?
+A: It should work fine, but hey! Are you, little pirate, that poor or just too greedy to spend 5 dollars on a game?
