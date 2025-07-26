@@ -51,10 +51,10 @@ In this section you can find answers for frequently asked questions and issues w
 A: No.
 
 ## Q: Can I customize role settings with this tool?
-A: Currently, you **can't** customize role settings, only basic ones. But I'm working on this feature and it will appear in the future updates.
+A: Currently, role settings cannot be customized—only basic settings are available. However, I’m working on this feature, and it will be included in a future update.
 
-## Q: There's no "settings.amogus" file. What do I do?
-A: Make sure you have launched the game and created a room at least once. Then try again.
+## Q: There's no "settings.amogus" file. What should I do?
+A: Make sure you’ve launched the game and created a room at least once. Then try again.
 
 ## Q: Does this work on cracked version of Among Us?
-A: It should work fine, but hey! Are you, little pirate, that poor or just too greedy to spend 5 dollars on a game?
+A: It should work fine, but come on - are you really pirating a $5 game? Support the developers if you can.
