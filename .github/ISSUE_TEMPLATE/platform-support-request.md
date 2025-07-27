@@ -1,9 +1,9 @@
 ---
 name: Platform support request
 about: Create a platform support request with a clear tutorial
-title: ''
-labels: ''
-assignees: ''
+title: Platform request...
+labels: platform request
+assignees: Zaxerf1234
 
 ---
 
