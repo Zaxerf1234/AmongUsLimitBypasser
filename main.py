@@ -11,7 +11,6 @@ def uint(val): # Wrote a short function becuase I am too lazy to write < 0 check
     except ValueError:
         raise ValueError(f"invalid literal for uint() with base 10: '{val}'")
 
-
 init()
 
 # Core settings
@@ -203,7 +202,7 @@ def modify_normal_among_us_hex(reference_hex):
     # Emergency Cooldown
     while not success_flag:
         try:
-            emergency_cooldown = input(f"{Fore.WHITE}Enter emergency cooldown (uint) or exit to return: {Fore.YELLOW}")
+            emergency_cooldown = input(f"{Fore.WHITE}Enter emergency cooldown (uint, max 255) or exit to return: {Fore.YELLOW}")
             if emergency_cooldown == "exit":
                 return None
             try:
@@ -342,7 +341,7 @@ def main():
 
 if __name__ == "__main__":
     print(pyfiglet.figlet_format("Among Us Limit Bypasser", font="modular"))
-    print("Copyright (C) 2025  Zaxerf1234")
+    print("Copyright (C) 2025 Zaxerf1234")
     print("Full license: https://github.com/Zaxerf1234/AmongUsLimitBypasser/blob/main/LICENSE")
     print("Made with love by Zaxerf1234. (source code: repo link will be here)")
     main()
