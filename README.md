@@ -1,7 +1,31 @@
-# Among Us Limit Bypasser
+<img width="590" height="341" alt="image" src="https://github.com/user-attachments/assets/c5d0dad0-1f9e-4692-92a4-2b7c1f008919" />
+
 An Among Us tool created with Python that allows bypassing settings limits in local and online lobbies.
 
-# How to use
+# Table of contents
+- [📈 Roadmap](#📈-roadmap)
+
+- [📌 How to use](#how-to-use)
+
+⠀⠀⠀⠀⠀◦ [🖥 Windows](##windows)
+
+⠀⠀⠀⠀⠀◦ [📱 Android](##android)
+
+⠀⠀⠀⠀⠀◦ [💻📳 MacOS, iOS](##macOS,-ios)
+
+- [✅ FAQ](#faq)
+
+# 📈 Roadmap
+
+🟡 Release
+
+🔴 Hide N Seek generator mode support
+
+🔴 Normal generator mode roles support
+
+🔴 Compatibility for all platforms
+
+# 📌 How to use
 ## 🖥 Windows
 0️⃣. Go to %userprofile%\AppData\LocalLow\Innersloth\Among Us path in your file explorer (or press Win+R and paste the same), it should open Among Us AppData folder. Now backup the "settings.amogus" file to another folder (that is needed for you to recover the file if you mess up with base64. You can still reinstall the game if you don't create one).
 
@@ -58,3 +82,5 @@ A: Make sure you’ve launched the game and created a room at least once. Then t
 
 ## Q: Does this work on cracked version of Among Us?
 A: It should work fine, but come on - are you really pirating a $5 game? Support the developers if you can.
+
+**FAQ may change at any time if I get more questions asked.**
