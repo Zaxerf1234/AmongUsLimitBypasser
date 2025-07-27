@@ -3,7 +3,7 @@
 An Among Us tool created with Python that allows bypassing settings limits in local and online lobbies.
 
 # Table of contents
-- [📈 Roadmap](#📈-roadmap)
+- [📈 Roadmap](#Roadmap)
 
 - [📌 How to use](#how-to-use)
 
