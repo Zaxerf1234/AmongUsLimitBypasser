@@ -11,7 +11,7 @@ An Among Us tool created with Python that allows bypassing settings limits in lo
 
 ⠀⠀⠀⠀⠀◦ [📱 Android](#-android)
 
-⠀⠀⠀⠀⠀◦ [💻📳 MacOS, iOS](#-macOS,-ios)
+⠀⠀⠀⠀⠀◦ [💻📳 MacOS, iOS](#-macOS-ios)
 
 - [✅ FAQ](#-faq)
 
