@@ -3,15 +3,15 @@
 An Among Us tool created with Python that allows bypassing settings limits in local and online lobbies.
 
 # Table of contents
-- [📈 Roadmap](#Roadmap)
+- [📈 Roadmap](#-roadmap)
 
-- [📌 How to use](#how-to-use)
+- [📌 How to use](#-how-to-use)
 
-⠀⠀⠀⠀⠀◦ [🖥 Windows](##windows)
+⠀⠀⠀⠀⠀◦ [🖥 Windows](##-windows)
 
-⠀⠀⠀⠀⠀◦ [📱 Android](##android)
+⠀⠀⠀⠀⠀◦ [📱 Android](##-android)
 
-⠀⠀⠀⠀⠀◦ [💻📳 MacOS, iOS](##macOS,-ios)
+⠀⠀⠀⠀⠀◦ [💻📳 MacOS, iOS](##-macOS,-ios)
 
 - [✅ FAQ](#faq)
 
