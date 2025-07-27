@@ -7,9 +7,9 @@ An Among Us tool created with Python that allows bypassing settings limits in lo
 
 - [📌 How to use](#-how-to-use)
 
-⠀⠀⠀⠀⠀◦ [🖥 Windows](##-windows)
+⠀⠀⠀⠀⠀◦ [🖥 Windows](#-windows)
 
-⠀⠀⠀⠀⠀◦ [📱 Android](##-android)
+⠀⠀⠀⠀⠀◦ [📱 Android](#-android)
 
 ⠀⠀⠀⠀⠀◦ [💻📳 MacOS, iOS](##-macOS,-ios)
 
