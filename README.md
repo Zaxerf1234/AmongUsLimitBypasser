@@ -75,7 +75,7 @@ In this section you can find answers for frequently asked questions and issues w
 A: No.
 
 ## Q: Can I customize role settings with this tool?
-A: Currently, role settings cannot be customized—only basic settings are available. However, I’m working on this feature, and it will be included in a future update.
+A: Currently, role settings cannot be customized - only basic settings are available. However, I’m working on this feature, and it will be included in a future update.
 
 ## Q: There's no "settings.amogus" file. What should I do?
 A: Make sure you’ve launched the game and created a room at least once. Then try again.
