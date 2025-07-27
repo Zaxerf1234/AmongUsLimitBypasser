@@ -50,7 +50,7 @@ Replace "insert_path_to_the_folder_here" with your actual path to the folder you
 ```bash
 pip install -r requirements.txt
 ```
-This will install all dependencies. If for some reason the method above doesn't work, install all libraries separately:
+This will install all dependencies. **Make sure you allowed file access for your IDE or else it won't work!** If for some reason the method above doesn't work or you didn't allow file access for your IDE, install all libraries separately:
 ```bash
 pip install colorama pyfiglet
 ```
