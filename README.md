@@ -27,6 +27,8 @@ An Among Us tool created with Python that allows bypassing settings limits in lo
 
 # 📌 How to use
 ## 🖥 Windows
+Steam guide: https://steamcommunity.com/sharedfiles/filedetails/?id=3537222815
+
 0️⃣. Go to %userprofile%\AppData\LocalLow\Innersloth\Among Us path in your file explorer (or press Win+R and paste the same), it should open Among Us AppData folder. Now backup the "settings.amogus" file to another folder (that is needed for you to recover the file if you mess up with base64. You can still reinstall the game if you don't create one).
 
 1️⃣. Go to [releases](https://github.com/Zaxerf1234/AmongUsLimitBypasser/releases) tab and download release that fits your Among Us version and unzip the zip file (note: releases for older versions won't be supported if there's a completely new hex arrangement in the new versions) or build one yourself from the source code.
