@@ -343,5 +343,5 @@ if __name__ == "__main__":
     print(pyfiglet.figlet_format("Among Us Limit Bypasser", font="modular"))
     print("Copyright (C) 2025 Zaxerf1234")
     print("Full license: https://github.com/Zaxerf1234/AmongUsLimitBypasser/blob/main/LICENSE")
-    print("Made with love by Zaxerf1234. (source code: repo link will be here)")
+    print("Made with love by Zaxerf1234. (source code: https://github.com/Zaxerf1234/AmongUsLimitBypasser)")
     main()
