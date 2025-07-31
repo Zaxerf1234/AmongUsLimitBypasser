@@ -64,7 +64,7 @@ pip install colorama pyfiglet
 
 5️⃣. Launch the game and host a local or online lobby to see the changes. Enjoy!
 
-## 💻📳 MacOS, iOS
+## 📳 iOS
 No data.
 
 If you know how to modify settings on following platforms, feel free to open an issue and tell me there!
