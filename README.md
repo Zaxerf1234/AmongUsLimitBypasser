@@ -1,5 +1,8 @@
 <img width="590" height="341" alt="image" src="https://github.com/user-attachments/assets/c5d0dad0-1f9e-4692-92a4-2b7c1f008919" />
 
+![Static Badge](https://img.shields.io/badge/Python-3.13-blue?style=plastic&logo=python&logoColor=%23196bcf&logoSize=amg&labelColor=%2381f230&color=%23f5be0a&link=https%3A%2F%2Fwww.python.org%2Fdownloads%2Frelease%2Fpython-3135%2F)
+
+
 An Among Us tool created with Python that allows bypassing settings limits in local and online lobbies.
 
 # Table of contents
