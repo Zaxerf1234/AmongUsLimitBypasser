@@ -24,7 +24,7 @@ An Among Us tool created with Python that allows bypassing settings limits in lo
 
 🟢 Hide N Seek generator mode support
 
-🔴 Normal generator mode roles support
+🟡 Normal generator mode roles support
 
 🔴 Compatibility for all platforms
 
