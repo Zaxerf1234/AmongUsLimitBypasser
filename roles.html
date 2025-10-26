@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Role Settings</title>
+<link rel="icon" href="{{ url_for('favicon') }}" type="image/x-icon">
+<style>
+  :root{
+    --bg:#0f0f12;
+    --panel:#15151a;
+    --edge:#24242c;
+    --text:#f2f2f2;
+    --muted:#8e99a8;
+    --blue:#0aa4d6;
+    --blue-dark:#087aa1;
+    --red:#d24a4a;
+    --red-dark:#9a2b2b;
+    --gray:#3a3d42;
+    --white:#ffffff;
+    --black:#0a0a0a;
+  }
+
+  *{ box-sizing: border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family: Inter, Arial, sans-serif;
+  }
+
+  /* Tabs bar */
+  .tabs{
+    display:flex; gap:10px; padding:12px;
+    background:#121216; border-bottom:2px solid #1f2230;
+    position:sticky; top:0; z-index:5;
+  }
+  .tabbtn{
+    width:72px; height:72px; border:none; cursor:pointer;
+    border-radius:10px; background:#2b2f39; 
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 2px 6px rgba(0,0,0,.35);
+    transition:transform .06s ease, background .2s ease;
+    outline:none;
+  }
+  .tabbtn img{ max-width:38px; max-height:38px; }
+  .tabbtn span{
+    font-weight:800; letter-spacing:1px; color:#d7d7d7;
+  }
+  .tabbtn:hover{ transform: translateY(-1px); }
+  .tabbtn.active{ outline:2px solid #47c0ff; background:#304050; }
+
+  /* Content container */
+  .wrap{ padding:18px; }
+
+  /* Section headers */
+  .section{
+    background:var(--panel); border-radius:10px; overflow:hidden;
+    box-shadow: 0 6px 20px rgba(0,0,0,.35);
+    margin-bottom:24px; border:1px solid var(--edge);
+  }
+  .section .titlebar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px; font-weight:800; letter-spacing:.5px;
+    background:linear-gradient(180deg, #1a1d28 0%, #12141b 100%);
+    color:#cfd8e3; border-bottom:1px solid #1f2430;
+  }
+  .badge{
+    font-size:.85rem; padding:6px 12px; border-radius:8px;
+    font-weight:800; color:#ffffff; text-transform:uppercase;
+  }
+  .badge.blue{ background:linear-gradient(180deg, var(--blue) 0%, var(--blue-dark) 100%); }
+  .badge.red{  background:linear-gradient(180deg, var(--red) 0%, var(--red-dark) 100%); }
+
+  /* Table-ish role grid */
+  .grid{
+    display:grid; grid-template-columns: 260px 1fr 1fr; gap:0;
+  }
+  .row{ display:contents; }
+  .cell{
+    padding:12px 14px; border-top:1px solid #20242f;
+    display:flex; align-items:center; justify-content:flex-start;
+    min-height:56px;
+  }
+  .cell.head{
+    font-weight:800; text-transform:uppercase; font-size:.9rem;
+    color:#d8e8f6; background:#12232c; border-top:none;
+  }
+  .cell.role{
+    background:linear-gradient(180deg, #0b4053 0%, #0a2e3b 100%);
+    color:#e9f6ff; font-weight:800;
+    border-right:1px solid #132a35;
+  }
+
+  /* Impostor color rows */
+  .grid.red .cell.role{
+    background:linear-gradient(180deg, #5a1f1f 0%, #3f1313 100%);
+    border-right:1px solid #4a1616; color:#ffecec;
+  }
+  .grid.red .cell.head{
+    background:#2b1212; color:#ffd5d5;
+  }
+
+  /* Counter controls */
+  .counter{
+    margin:0 auto 0 0; display:flex; align-items:center; gap:8px;
+  }
+  .btn{
+    width:34px; height:34px; border:none; border-radius:6px;
+    color:#111; background:#e7eef6; font-weight:900; font-size:18px;
+    cursor:pointer; box-shadow: 0 2px 0 rgba(0,0,0,.35);
+  }
+  .btn:active{ transform: translateY(1px); }
+
+  .num{
+    min-width:64px; padding:6px 10px; text-align:center;
+    border-radius:8px; border:2px solid #dfe6ef;
+    background:#0e0f12; color:#fff; font-weight:800;
+  }
+  .num[readonly]{ cursor:text; }
+  .pct{ margin-left:auto; } /* keep right column aligned */
+
+  /* Footer submit */
+  .submitbar{
+    display:flex; justify-content:center; padding:20px 0 40px;
+  }
+  .submit{
+    padding:12px 26px; border:none; border-radius:12px;
+    font-size:1.05rem; font-weight:900; cursor:pointer;
+    color:#f8f8f8; background:linear-gradient(180deg, #5df0a6, #24c67b);
+    box-shadow: 0 8px 20px rgba(36,198,123,.35);
+  }
+</style>
+
+<script>
+  function clamp255(v){
+    v = parseInt(v || 0, 10);
+    if (isNaN(v)) v = 0;
+    if (v < 0) v = 0;
+    if (v > 255) v = 255;
+    return v;
+  }
+  function adjust(id, delta){
+    const el = document.getElementById(id);
+    const v = clamp255(el.value);
+    el.value = clamp255(v + delta);
+  }
+  function enforce255(ev){
+    ev.target.value = clamp255(ev.target.value);
+  }
+
+  function openTab(role){
+    document.querySelectorAll(".tabbtn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab").forEach(t => t.style.display = "none");
+    document.getElementById("tabbtn-"+role).classList.add("active");
+    document.getElementById("tab-"+role).style.display = "block";
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    // default tab
+    openTab("ALL");
+    // clamp inputs on typing
+    document.querySelectorAll('input[type=\"number\"]').forEach(inp=>{
+      inp.addEventListener('input', enforce255);
+    });
+  });
+</script>
+</head>
+<body>
+
+<form method="post">
+  <!-- Tabs with static icons -->
+  <div class="tabs">
+    <!-- ALL is text on gray -->
+    <button type="button" class="tabbtn" id="tabbtn-ALL" onclick="openTab('ALL')">
+      <span>ALL</span>
+    </button>
+
+    {% for r in crewmate_roles + impostor_roles %}
+      <button type="button" class="tabbtn" id="tabbtn-{{ r }}" onclick="openTab('{{ r }}')">
+        {% if icons[r] %}
+          <img src="{{ icons[r] }}" alt="{{ r }}">
+        {% else %}
+          <span>{{ r }}</span>
+        {% endif %}
+      </button>
+    {% endfor %}
+  </div>
+
+  <div class="wrap">
+    <!-- ALL TAB -->
+    <div class="tab" id="tab-ALL" style="display:none">
+      <!-- Crewmate section -->
+      <div class="section">
+        <div class="titlebar">
+          <div class="badge blue">Crewmate Roles</div>
+          <div style="display:flex;gap:18px;opacity:.85"></div>
+        </div>
+
+        <div class="grid">
+          <div class="cell head">Role</div>
+          <div class="cell head"># of Role</div>
+          <div class="cell head">% Chance</div>
+
+          {% for r in crewmate_roles %}
+          <div class="row">
+            <div class="cell role">{{ r }}</div>
+            <div class="cell">
+              <div class="counter">
+                <button class="btn" type="button" onclick="adjust('{{ slug(r) }}_count', -1)">-</button>
+                <input class="num" id="{{ slug(r) }}_count" name="{{ slug(r) }}_count" type="number" min="0" max="255" value="0">
+                <button class="btn" type="button" onclick="adjust('{{ slug(r) }}_count', 1)">+</button>
+              </div>
+            </div>
+            <div class="cell pct">
+              <div class="counter">
+                <button class="btn" type="button" onclick="adjust('{{ slug(r) }}_chance', -1)">-</button>
+                <input class="num" id="{{ slug(r) }}_chance" name="{{ slug(r) }}_chance" type="number" min="0" max="255" value="0">
+                <button class="btn" type="button" onclick="adjust('{{ slug(r) }}_chance', 1)">+</button>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Impostor section -->
+      <div class="section">
+        <div class="titlebar">
+          <div class="badge red">Impostor Roles</div>
+          <div style="display:flex;gap:18px;opacity:.85"></div>
+        </div>
+
+        <div class="grid red">
+          <div class="cell head">Role</div>
+          <div class="cell head"># of Role</div>
+          <div class="cell head">% Chance</div>
+
+          {% for r in impostor_roles %}
+          <div class="row">
+            <div class="cell role">{{ r }}</div>
+            <div class="cell">
+              <div class="counter">
+                <button class="btn" type="button" onclick="adjust('{{ slug(r) }}_count', -1)">-</button>
+                <input class="num" id="{{ slug(r) }}_count" name="{{ slug(r) }}_count" type="number" min="0" max="255" value="0">
+                <button class="btn" type="button" onclick="adjust('{{ slug(r) }}_count', 1)">+</button>
+              </div>
+            </div>
+            <div class="cell pct">
+              <div class="counter">
+                <button class="btn" type="button" onclick="adjust('{{ slug(r) }}_chance', -1)">-</button>
+                <input class="num" id="{{ slug(r) }}_chance" name="{{ slug(r) }}_chance" type="number" min="0" max="255" value="0">
+                <button class="btn" type="button" onclick="adjust('{{ slug(r) }}_chance', 1)">+</button>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- PER-ROLE TABS (reuse same style; include Count/Chance + advanced fields) -->
+    {% for r in crewmate_roles + impostor_roles %}
+    {% set is_impostor = (r in impostor_roles) %}
+    <div class="tab" id="tab-{{ r }}" style="display:none">
+      <div class="section">
+        <div class="titlebar">
+          <div class="badge {{ 'red' if is_impostor else 'blue' }}">{{ r }}</div>
+          <div style="display:flex;gap:18px;opacity:.85"></div>
+        </div>
+
+        <div class="grid {{ 'red' if is_impostor else '' }}">
+          <div class="cell head">Setting</div>
+          <div class="cell head">Value</div>
+          <div class="cell head"></div>
+
+          {% for f in role_fields[r] %}
+          <div class="row">
+            <div class="cell role">{{ f.replace('_',' ').title() }}</div>
+            <div class="cell">
+              <div class="counter">
+                <button class="btn" type="button" onclick="adjust('{{ slug(r) }}_{{ f }}', -1)">-</button>
+                <input class="num" id="{{ slug(r) }}_{{ f }}" name="{{ slug(r) }}_{{ f }}" type="number" min="0" max="255" value="0">
+                <button class="btn" type="button" onclick="adjust('{{ slug(r) }}_{{ f }}', 1)">+</button>
+              </div>
+            </div>
+            <div class="cell"></div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="submitbar">
+    <button class="submit" type="submit">Submit</button>
+  </div>
+</form>
+
+</body>
+</html>
