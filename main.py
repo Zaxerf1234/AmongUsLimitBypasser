@@ -1,8 +1,11 @@
 from colorama import *
+import logging
 import struct
+import time
+import server
 import base64
 import pyfiglet
-def uint(val): # Wrote a short function becuase I am too lazy to write < 0 check every time
+def uint(val): # Wrote a short function because I am too lazy to write < 0 check every time
     try:
         intval = int(val)
         if intval < 0:
@@ -13,624 +16,448 @@ def uint(val): # Wrote a short function becuase I am too lazy to write < 0 check
 
 init()
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 # Core settings
-reference_hex = "097400000100000f00010000000000803f0000803f0000c03f000034420101020100000001010f00000078000000000001010000000705000000030000000a1e020000000200000f05040000000300003c0a00030000000200001e0f080000000200000a01090000000200000f1e0a0000000300000f1e01"
+reference_hex = "0a8400000100000f00010000000000803f0000803f0000c03f000034420101020100000002010f00000078000000000f0101000000090500000003000000191402000000020000140a0400000003000028140003000000020000190f080000000200000f0009000000020000191e0a0000000300001919020c000000010000031200000001000014"
 # Pitch dark
 hide_n_seek_ref_hex = "094200000200000a00010000030000803f9a99193fcdcccc3e0101020001000000000048433333b33e0000803e0001000048429a99993f0100ffffffff0000c0400000404000"
-maps = { # Didn't figure out how to edit map bytes, so wrote a dict for every map hex, they may change after among us update
-    "skeld": {"normal": "640f0001000000", "id": 0},
-    "mira": {"normal": "000a0001000001", "id": 1},
-    "polus": {"normal": "000f0001020002", "id": 2},
-    "eht dleks": {"normal": "00000000000003", "id": 3}, # Only can find it in hide n seek, not in normal among us
-    "airship": {"normal": "000f0001020004", "id": 4},
-    "fungle": {"normal": "000f0001020005", "id": 5}
+maps = { # Turns out bytes before 13th byte are some sort of metadata or version markers
+    "skeld": {"id": 0},
+    "mira": {"id": 1},
+    "polus": {"id": 2},
+    "eht dleks": {"id": 3}, # Changing your date to the first of April also works
+    "airship": {"id": 4},
+    "fungle": {"id": 5}
 }
 
-def encode_base64(hex_str):
-    if not hex_str: # If no argument
-        hex_str = input(f"{Fore.WHITE}Modified hex: {Fore.YELLOW}")
-        try:
-            bytes_data = bytes.fromhex(hex_str)
-        except ValueError:
-            print(f"{Fore.RED}ERROR - Invalid hex string!{Fore.WHITE}")
-            return
+# ------------------ HEX INDEXES AND DATA ------------------
 
-        if len(hex_str) == 240:
-            print(f"{Fore.GREEN}240 characters - OK for normal{Fore.WHITE}")
-            print(f"Output base64:{Fore.BLUE}", base64.b64encode(bytes_data).decode(), Fore.WHITE)
-        elif len(hex_str) == 120 or len(hex_str) == 122:
-            print(f"{Fore.GREEN}{len(hex_str)} characters - OK for hide n seek{Fore.WHITE}")
-            print(f"Output base64:{Fore.BLUE}", base64.b64encode(bytes_data).decode(), Fore.WHITE)
-        else:
-            print(f"{Fore.RED}ERROR - {len(hex_str)} characters, the game may not load!{Fore.WHITE}")
-            print(f"Output base64:{Fore.BLUE}", base64.b64encode(bytes_data).decode(), Fore.WHITE)
-    else: # If some argument
-        try:
-            bytes_data = bytes.fromhex(hex_str)
-        except ValueError:
-            return f"{Fore.RED}ERROR - Invalid hex string!{Fore.WHITE}"
+normal_data = { # Offsets for basic settings in the hex
+    "map": {
+        "byte1": 12, "byte2": None, "type": "map",
+        "prompt": f"{Fore.WHITE}Enter map name (Skeld, Mira, Polus, ehT dlekS, Airship, Fungle) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid map name!{Fore.WHITE}"
+    },
+    "impostors": {
+        "byte1": 36, "byte2": None, "type": "uint",
+        "prompt": f"{Fore.WHITE}Enter impostors count (uint, max 255, note: setting this value to more than 3 or 0 will only work in local lobbies) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid number of impostors! Must be a positive non-floating number (uint) between 1 and 3.{Fore.WHITE}"
+    },
+    "kill_cooldown": {
+        "byte1": 25, "byte2": 29, "type": "float",
+        "prompt": f"{Fore.WHITE}Enter kill cooldown (float, note: impostors sometimes cannot kill if kill cooldown is set to 0) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid kill cooldown! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "impostor_vision": {
+        "byte1": 21, "byte2": 25, "type": "float",
+        "prompt": f"{Fore.WHITE}Enter impostor vision (float) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid impostor vision! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "player_speed": {
+        "byte1": 13, "byte2": 17, "type": "float",
+        "prompt": f"{Fore.WHITE}Enter player speed (float, note: setting this value to more than 3 or less than 0 will only work in local lobbies, public lobby will most likely kick you from the room) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid player speed! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "crewmate_vision": {
+        "byte1": 17, "byte2": 21, "type": "float",
+        "prompt": f"{Fore.WHITE}Enter crewmate vision (float) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid crewmate vision! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "emergency_meetings": {
+        "byte1": 32, "byte2": None, "type": "uint",
+        "prompt": f"{Fore.WHITE}Enter emergency meetings count (uint, max 255) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid emergency meetings count! Must be a positive non-floating number (uint).{Fore.WHITE}"
+    },
+    "emergency_cooldown": {
+        "byte1": 47, "byte2": None, "type": "uint",
+        "prompt": f"{Fore.WHITE}Enter emergency cooldown (uint, max 255) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid emergency cooldown! Must be a positive non-floating number (uint).{Fore.WHITE}"
+    },
+    "discussion_time": {
+        "byte1": 38, "byte2": 42, "type": "int",
+        "prompt": f"{Fore.WHITE}Enter discussion time (int, note: setting this value to 0 or to a negative number will skip the discussion phase) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid discussion time! Must be a non-floating number (int).{Fore.WHITE}"
+    },
+    "voting_time": {
+        "byte1": 42, "byte2": 46, "type": "int",
+        "prompt": f"{Fore.WHITE}Enter voting time (int, note: setting this value to 0 or to a negative number will make the voting infinite (it will only end after everyone votes)) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid voting time! Must be a non-floating number (int).{Fore.WHITE}"
+    },
+    "common_tasks": {
+        "byte1": 29, "byte2": None, "type": "uint",
+        "prompt": f"{Fore.WHITE}Enter common tasks count (uint, max 255, note: setting this value to more than the number of total common tasks on the map will result in completing the same task several times) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid common tasks count! Must be a positive non-floating number (uint).{Fore.WHITE}"
+    },
+    "long_tasks": {
+        "byte1": 30, "byte2": None, "type": "uint",
+        "prompt": f"{Fore.WHITE}Enter long tasks count (uint, max 255, note: setting this value to more than the number of total long tasks on the map will result in completing the same task several times) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid long tasks count! Must be a positive non-floating number (uint).{Fore.WHITE}"
+    },
+    "short_tasks": {
+        "byte1": 31, "byte2": None, "type": "uint",
+        "prompt": f"{Fore.WHITE}Enter short tasks count (uint, max 255, note: setting this value to more than the number of total short tasks on the map will result in completing the same task several times) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid short tasks count! Must be a positive non-floating number (uint).{Fore.WHITE}"
+    },
+}
+
+hns_data = { # Offsets for hide n seek settings in the hex
+    "map": {
+        "byte1": 12, "byte2": None, "type": "map",
+        "prompt": f"{Fore.WHITE}Enter map name (Skeld, Mira, Polus, ehT dlekS, Airship, Fungle) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid map name!{Fore.WHITE}"
+    },
+    "player_speed": {
+        "byte1": 13, "byte2": 17, "type": "float",
+        "prompt": f"{Fore.WHITE}Enter player speed (float, note: setting this value to more than 3 or less than 0 will only work in local lobbies) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid player speed! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "hiding_time": {
+        "byte1": 35, "byte2": 39, "type": "midbigfloat",
+        "prompt": f"{Fore.WHITE}Enter hiding time (float, note: may be incorrect due to among us rounding) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid hiding time! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "crewmate_vision": {
+        "byte1": 17, "byte2": 21, "type": "float",
+        "prompt": f"{Fore.WHITE}Enter crewmate vision (float) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid crewmate vision! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "vent_uses": {
+        "byte1": 29, "byte2": None, "type": "uint",
+        "prompt": f"{Fore.WHITE}Enter vent uses count (uint, max 255) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid vent uses count! Must be a positive non-floating number (uint).{Fore.WHITE}"
+    },
+    "max_vent_time": {
+        "byte1": 67, "byte2": 71, "type": "midbigfloat",
+        "prompt": f"{Fore.WHITE}Enter max time in vent (float, note: may be incorrect due to among us rounding) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid max time in vent! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "crewmate_flashlight_size": {
+        "byte1": 37, "byte2": 41, "type": "float",
+        "prompt": f"{Fore.WHITE}Enter crewmate flashlight size (float) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid crewmate flashlight size! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "impostor_flashlight_size": {
+        "byte1": 41, "byte2": 45, "type": "float",
+        "prompt": f"{Fore.WHITE}Enter impostor flashlight size (float) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid impostor flashlight size! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "impostor_vision": {
+        "byte1": 21, "byte2": 25, "type": "float",
+        "prompt": f"{Fore.WHITE}Enter impostor vision (float) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid impostor vision! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "final_time": {
+        "byte1": 47, "byte2": 51, "type": "float",
+        "prompt": f"{Fore.WHITE}Enter final hide time (float, note: may be incorrect due to among us rounding) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid final hide time! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "final_impostor_speed": {
+        "byte1": 51, "byte2": 55, "type": "float",
+        "prompt": f"{Fore.WHITE}Enter final hide impostor speed (float) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid final hide impostor speed! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "ping_interval": {
+        "byte1": 63, "byte2": 67, "type": "midbigfloat",
+        "prompt": f"{Fore.WHITE}Enter ping interval (float) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid ping interval! Must be a floating number (float).{Fore.WHITE}"
+    },
+    "common_tasks": {
+        "byte1": 25, "byte2": None, "type": "uint",
+        "prompt": f"{Fore.WHITE}Enter common tasks count (uint, max 255) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid common tasks count! Must be a positive non-floating number (uint).{Fore.WHITE}"
+    },
+    "long_tasks": {
+        "byte1": 26, "byte2": None, "type": "uint",
+        "prompt": f"{Fore.WHITE}Enter long tasks count (uint, max 255) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid long tasks count! Must be a positive non-floating number (uint).{Fore.WHITE}"
+    },
+    "short_tasks": {
+        "byte1": 27, "byte2": None, "type": "uint",
+        "prompt": f"{Fore.WHITE}Enter short tasks count (uint, max 255) or exit to return: {Fore.YELLOW}",
+        "error_prompt": f"{Fore.RED}ERROR - Invalid short tasks count! Must be a positive non-floating number (uint).{Fore.WHITE}"
+    }
+}
+
+role_bytes = { # Offsets for role settings in the hex
+    "Shapeshifter": {
+        "count": 56,
+        "chance": 57,
+        "shapeshift_cooldown": 62,
+        "shapeshift_duration": 63,
+    },
+    "Scientist": {
+        "count": 66,
+        "chance": 67,
+        "vitals_display_cooldown": 71,
+        "battery_duration": 72,
+    },
+    "Guardian Angel": {
+        "count": 75,
+        "chance": 76,
+        "protect_cooldown": 80,
+        "protection_duration": 81,
+    },
+    "Engineer": {
+        "count": 85,
+        "chance": 86,
+        "vent_use_cooldown": 90,
+        "max_time_in_vents": 91,
+    },
+    "Noisemaker": {
+        "count": 94,
+        "chance": 95,
+        "alert_duration": 99,
+    },
+    "Phantom": {
+        "count": 103,
+        "chance": 104,
+        "vanish_cooldown": 108,
+        "vanish_duration": 109,
+    },
+    "Tracker": {
+        "count": 112,
+        "chance": 113,
+        "tracking_cooldown": 117,
+        "tracking_duration": 118,
+        "tracking_delay": 119,
+    },
+    "Detective": {
+        "count": 122,
+        "chance": 123,
+        "suspects_per_case": 127,
+    },
+    "Viper": {
+        "count": 130,
+        "chance": 131,
+        "dissolve_time": 135,
+    }
+}
+
+normal_hex_len = 272
+hns_hex_len = 142
+second_hns_hex_len = 140
+
+# ------------------ FUNCTIONS AND CODE ------------------
+
+def set_data(hex_data, prompt, error_prompt, type, byte1, byte2):
+    if type == "map":
+        while True:
+            try:
+                map = input(f"{Fore.WHITE}Enter map name (Skeld, Mira, Polus, ehT dlekS, Airship, Fungle) or exit to return: {Fore.YELLOW}")
+                if map.lower() == "exit":
+                    return None
+                if map.lower() == "eht dleks":
+                    print(f"{Fore.YELLOW}WARN - Skeld backwards (ehT dlekS) may not work in normal game or online lobby!{Fore.WHITE}")
+                if map.lower() not in maps.keys():
+                    print(f"{Fore.RED}ERROR - Invalid map name!{Fore.WHITE}")
+                    continue
+                hex_data[byte1] = maps[map.lower()]["id"] # I hate maps
+                return "Success"
+            except Exception as e:
+                print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
+                continue
+    elif type == "uint":
+        while True:
+            try:
+                val = input(f"{Fore.WHITE}{prompt}{Fore.YELLOW}")
+                if val == "exit":
+                    return None
+                try:
+                    val = uint(val)
+                except:
+                    print(f"{Fore.RED}{error_prompt}{Fore.WHITE}")
+                    continue
+                hex_data[byte1] = val
+                return "Success"
+            except Exception as e:
+                print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
+                continue
+    elif type == "int":
+        while True:
+            try:
+                val = input(f"{Fore.WHITE}{prompt}{Fore.YELLOW}")
+                if val == "exit":
+                    return None
+                try:
+                    val = int(val)
+                except:
+                    print(f"{Fore.RED}{error_prompt}{Fore.WHITE}")
+                    continue
+                hex_data[byte1:byte2] = struct.pack('<i', val)
+                return "Success"
+            except Exception as e:
+                print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
+                continue
+    elif type == "float":
+        while True:
+            try:
+                val = input(f"{Fore.WHITE}{prompt}{Fore.YELLOW}")
+                if val == "exit":
+                    return None
+                try:
+                    val = float(val)
+                except:
+                    print(f"{Fore.RED}ERROR - Invalid kill cooldown! Must be a floating number (float).{Fore.WHITE}")
+                    continue
+                hex_data[byte1:byte2] = struct.pack('<f', val)
+                return "Success"
+            except Exception as e:
+                print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
+                continue
+    elif type == "midbigfloat":
+        while True:
+            try:
+                val = input(f"{Fore.WHITE}{prompt}{Fore.YELLOW}")
+                if val == "exit":
+                    return None
+                try:
+                    val = float(val)
+                except:
+                    print(f"{Fore.RED}{error_prompt}{Fore.WHITE}")
+                    continue
+                hex_data[byte1:byte2] = struct.pack('>f', val)[1::-1] + struct.pack('>f', val)[3:1:-1]
+                return "Success"
+            except Exception as e:
+                print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
+                continue
         
-        if len(hex_str) == 240:
-            print(f"{Fore.GREEN}240 characters - OK for normal{Fore.WHITE}")
-            return base64.b64encode(bytes_data).decode()
-        elif len(hex_str) == 140 or len(hex_str) == 142:
-            print(f"{Fore.GREEN}{len(hex_str)} characters - OK for hide n seek{Fore.WHITE}")
-            return base64.b64encode(bytes_data).decode()
+
+def process_data(string, mode):
+    if mode == "encode":
+        if not string: # If no argument
+            string = input(f"{Fore.WHITE}Modified hex: {Fore.YELLOW}")
+            try:
+                bytes_data = bytes.fromhex(string)
+            except ValueError:
+                print(f"{Fore.RED}ERROR - Invalid hex string!{Fore.WHITE}")
+                return
+
+            if len(string) == normal_hex_len:
+                print(f"{Fore.GREEN}{normal_hex_len} characters - OK for normal{Fore.WHITE}")
+                print(f"Output base64:{Fore.BLUE}", base64.b64encode(bytes_data).decode(), Fore.WHITE)
+            elif len(string) == hns_hex_len or len(string) == second_hns_hex_len:
+                print(f"{Fore.GREEN}{len(string)} characters - OK for hide n seek{Fore.WHITE}")
+                print(f"Output base64:{Fore.BLUE}", base64.b64encode(bytes_data).decode(), Fore.WHITE)
+            else:
+                print(f"{Fore.RED}ERROR - {len(string)} characters, the game may not load!{Fore.WHITE}")
+                print(f"Output base64:{Fore.BLUE}", base64.b64encode(bytes_data).decode(), Fore.WHITE)
+        else: # If some argument
+            try:
+                bytes_data = bytes.fromhex(string)
+            except ValueError:
+                return f"{Fore.RED}ERROR - Invalid hex string!{Fore.WHITE}"
+            
+            if len(string) == normal_hex_len:
+                print(f"{Fore.GREEN}{normal_hex_len} characters - OK for normal{Fore.WHITE}")
+                return base64.b64encode(bytes_data).decode()
+            elif len(string) == hns_hex_len or len(string) == second_hns_hex_len:
+                print(f"{Fore.GREEN}{len(string)} characters - OK for hide n seek{Fore.WHITE}")
+                return base64.b64encode(bytes_data).decode()
+            else:
+                print(f"{Fore.RED}ERROR - {len(string)} characters, the game may not load!{Fore.WHITE}")
+                return base64.b64encode(bytes_data).decode()
+    elif mode == "decode":
+        if not string:
+            string = input(f"{Fore.WHITE}Base64 string: {Fore.YELLOW}")
+            try:
+                bytes_data = base64.b64decode(string)
+            except (ValueError, base64.binascii.Error):
+                print(f"{Fore.RED}ERROR - Invalid Base64 string!{Fore.WHITE}")
+                return 
+
+            hex_output = bytes_data.hex()
+            print(f"Output hex: {Fore.BLUE}{hex_output}{Fore.WHITE}")
         else:
-            print(f"{Fore.RED}ERROR - {len(hex_str)} characters, the game may not load!{Fore.WHITE}")
-            return base64.b64encode(bytes_data).decode()
+            try:
+                bytes_data = base64.b64decode(string)
+            except (ValueError, base64.binascii.Error):
+                return f"{Fore.RED}ERROR - Invalid Base64 string!{Fore.WHITE}"
 
-def decode_base64(base64_str):
-    if not base64_str:
-        base64_str = input(f"{Fore.WHITE}Base64 string: {Fore.YELLOW}")
-        try:
-            bytes_data = base64.b64decode(base64_str)
-        except (ValueError, base64.binascii.Error):
-            print(f"{Fore.RED}ERROR - Invalid Base64 string!{Fore.WHITE}")
-            return 
+            hex_output = bytes_data.hex()
+            return hex_output
 
-        hex_output = bytes_data.hex()
-        print(f"Output hex: {Fore.BLUE}{hex_output}{Fore.WHITE}")
-    else:
-        try:
-            bytes_data = base64.b64decode(base64_str)
-        except (ValueError, base64.binascii.Error):
-            return f"{Fore.RED}ERROR - Invalid Base64 string!{Fore.WHITE}"
-
-        hex_output = bytes_data.hex()
-        return hex_output
 
 def modify_normal_among_us_hex(reference_hex):
     hex_data = bytearray.fromhex(reference_hex)
-    success_flag = False
 
-    # Map
-    while not success_flag:
-        try:
-            map = input(f"{Fore.WHITE}Enter map name (Skeld, Mira, Polus, ehT dlekS, Airship, Fungle) or exit to return: {Fore.YELLOW}")
-            if map.lower() == "exit":
-                return None
-            if map.lower() == "eht dleks":
-                print(f"{Fore.YELLOW}WARN - Skeld backwards (ehT dlekS) may not work in normal game or online lobby!{Fore.WHITE}")
-            if map.lower() not in maps.keys():
-                print(f"{Fore.RED}ERROR - Invalid map name!{Fore.WHITE}")
-                continue
-            hex_data[6:13] = struct.pack('>7s', bytes.fromhex(maps[map.lower()]["normal"])) # I hate maps
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
+    # Basic settings
+    for key, info in normal_data.items():
+        res = set_data(hex_data, info["prompt"], info["error_prompt"], info["type"], info["byte1"], info["byte2"])
+        if res is None:
+            return None
 
-    # Impostors
-    while not success_flag:
-        try:
-            impostors = input(f"{Fore.WHITE}Enter impostors count (uint, max 255, note: setting this value to more than 3 or 0 will only work in local lobbies)) or exit to return: {Fore.YELLOW}")
-            if impostors == "exit":
-                return None
-            try:
-                impostors = uint(impostors)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid impostors count! Must be a positive non-floating number (uint).{Fore.WHITE}")
-                continue
-            hex_data[36] = impostors
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
+    # Roles
+    while True:
+        roles = input(f"{Fore.WHITE}Do you want to customize roles? (true/false) {Fore.YELLOW}")
+        if roles == "exit":
+            return None
+        if roles.lower() == "true":
+            break
+        elif roles.lower() == "false":
+            return hex_data.hex()
+        else:
+            print(f"{Fore.RED}ERROR - Invalid input! Must be 'true' or 'false'.{Fore.WHITE}")
             continue
-    success_flag = False
 
-    # Kill Cooldown
-    while not success_flag:
-        try:
-            kill_cooldown = input(f"{Fore.WHITE}Enter kill cooldown (float, note: impostors sometimes cannot kill if kill cooldown is set to 0) or exit to return: {Fore.YELLOW}")
-            if kill_cooldown == "exit":
-                return None
-            try:
-                kill_cooldown = float(kill_cooldown)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid kill cooldown! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[25:29] = struct.pack('<f', kill_cooldown)
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
+    logging.getLogger('werkzeug').disabled = True
+    while True:
+        print(f"{Fore.MAGENTA}Please fill out the form in another window.{Fore.WHITE}")
+        roles_json = server.run("window") # run the server webview in window mode
 
-    # Impostor Vision
-    while not success_flag:
-        try:
-            impostor_vision = input(f"{Fore.WHITE}Enter impostor vision (float) or exit to return: {Fore.YELLOW}")
-            if impostor_vision == "exit":
-                return None
-            try:
-                impostor_vision = float(impostor_vision)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid impostor vision! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[21:25] = struct.pack('<f', impostor_vision)
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
+        if roles_json is None:
+            print(f"{Fore.RED}ERROR - Roles customization window was closed without submitting data or something went wrong. Restarting in 3 seconds...{Fore.WHITE}")
+            time.sleep(3)
             continue
-    success_flag = False
+        else:
+            server.submitted_data = None
+            break
 
-    # Player Speed
-    while not success_flag:
-        try:
-            player_speed = input(f"{Fore.WHITE}Enter player speed (float, note: setting this value to more than 3 or less than 0 will only work in local lobbies, public lobby will most likely kick you from the room) or exit to return: {Fore.YELLOW}")
-            if player_speed == "exit":
-                return None
-            try:
-                player_speed = float(player_speed)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid player speed! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[13:17] = struct.pack('<f', player_speed)
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Crewmate Vision
-    while not success_flag:
-        try:
-            crewmate_vision = input(f"{Fore.WHITE}Enter crewmate vision (float) or exit to return: {Fore.YELLOW}")
-            if crewmate_vision == "exit":
-                return None
-            try:
-                crewmate_vision = float(crewmate_vision)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid crewmate vision! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[17:21] = struct.pack('<f', crewmate_vision)
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Emergency Meetings
-    while not success_flag:
-        try:
-            emergency_meetings = input(f"{Fore.WHITE}Enter emergency meetings count (uint, max 255)) or exit to return: {Fore.YELLOW}")
-            if emergency_meetings == "exit":
-                return None
-            try:
-                emergency_meetings = uint(emergency_meetings)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid emergency meetings count! Must be a positive non-floating number (uint).{Fore.WHITE}")
-                continue
-            hex_data[32] = emergency_meetings
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Emergency Cooldown
-    while not success_flag:
-        try:
-            emergency_cooldown = input(f"{Fore.WHITE}Enter emergency cooldown (uint, max 255) or exit to return: {Fore.YELLOW}")
-            if emergency_cooldown == "exit":
-                return None
-            try:
-                emergency_cooldown = uint(emergency_cooldown)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid emergency cooldown! Must be a positive non-floating number (uint).{Fore.WHITE}")
-                continue
-            hex_data[47] = emergency_cooldown
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Discussion Time
-    while not success_flag:
-        try:
-            discussion_time = input(f"{Fore.WHITE}Enter discussion time (int, note: setting this value to 0 or to a negative number will skip the discussion phase) or exit to return: {Fore.YELLOW}")
-            if discussion_time == "exit":
-                return None
-            try:
-                discussion_time = int(discussion_time)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid discussion time! Must be a non-floating number (int).{Fore.WHITE}")
-                continue
-            hex_data[38:42] = struct.pack('<i', discussion_time)
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Voting Time
-    while not success_flag:
-        try:
-            voting_time = input(f"{Fore.WHITE}Enter voting time (int, note: setting this value to 0 or to a negative number will make the voting infinite (it will only end after everyone votes)) or exit to return: {Fore.YELLOW}")
-            if voting_time == "exit":
-                return None
-            try:
-                voting_time = int(voting_time)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid voting time! Must be a non-floating number (int).{Fore.WHITE}")
-                continue
-            hex_data[42:46] = struct.pack('<i', voting_time)
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Common Tasks
-    while not success_flag:
-        try:
-            common_tasks = input(f"{Fore.WHITE}Enter common tasks count (uint, max 255, note: settings this value to more than the number of total common tasks on the map will result in completing the same task for several times) or exit to return: {Fore.YELLOW}")
-            if common_tasks == "exit":
-                return None
-            try:
-                common_tasks = uint(common_tasks)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid common tasks count! Must be a positive non-floating number (uint).{Fore.WHITE}")
-                continue
-            hex_data[29] = common_tasks
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Long Tasks
-    while not success_flag:
-        try:
-            long_tasks = input(f"{Fore.WHITE}Enter long tasks count (uint, max 255, note: settings this value to more than the number of total long tasks on the map will result in completing the same task for several times) or exit to return: {Fore.YELLOW}")
-            if long_tasks == "exit":
-                return None
-            try:
-                long_tasks = uint(long_tasks)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid long tasks count! Must be a positive non-floating number (uint).{Fore.WHITE}")
-                continue
-            hex_data[30] = long_tasks
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Short Tasks
-    while not success_flag:
-        try:
-            short_tasks = input(f"{Fore.WHITE}Enter short tasks count (uint, max 255, note: settings this value to more than the number of total short tasks on the map will result in completing the same task for several times) or exit to return: {Fore.YELLOW}")
-            if short_tasks == "exit":
-                return None
-            try:
-                short_tasks = uint(short_tasks)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid short tasks count! Must be a positive non-floating number (uint).{Fore.WHITE}")
-                continue
-            hex_data[31] = short_tasks
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
+    for role, fields in role_bytes.items():
+        for field, offset in fields.items():
+            hex_data[offset] = roles_json[role][field]
 
     return hex_data.hex()
-
 
 
 def modify_hide_n_seek_among_us_hex(reference_hex):
     hex_data = bytearray.fromhex(reference_hex)
-    success_flag = False
 
-    # Map
-    while not success_flag:
-        try:
-            map = input(f"{Fore.WHITE}Enter map name (Skeld, Mira, Polus, ehT dlekS, Airship, Fungle) or exit to return: {Fore.YELLOW}")
-            if map.lower() == "exit":
-                return None
-            if map.lower() == "eht dleks":
-                print(f"{Fore.YELLOW}WARN - Skeld backwards (ehT dlekS) may not work in online lobby!{Fore.WHITE}")
-            if map.lower() not in maps.keys():
-                print(f"{Fore.RED}ERROR - Invalid map name!{Fore.WHITE}")
-                continue
-            hex_data[12] = maps[map.lower()]["id"]
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Player Speed
-    while not success_flag:
-        try:
-            player_speed = input(f"{Fore.WHITE}Enter player speed (float, note: setting this value to more than 3 or less than 0 will only work in local lobbies, public lobby will most likely kick you from the room) or exit to return: {Fore.YELLOW}")
-            if player_speed == "exit":
-                return None
-            try:
-                player_speed = float(player_speed)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid player speed! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[13:17] = struct.pack('<f', player_speed)
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Hiding Time
-    while not success_flag:
-        try:
-            hiding_time = input(f"{Fore.WHITE}Enter hiding time (float, note: may be incorrect due to among us rounding) or exit to return: {Fore.YELLOW}")
-            if hiding_time == "exit":
-                return None
-            try:
-                hiding_time = float(hiding_time)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid hiding time! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[35:39] = struct.pack('>f', hiding_time)[1::-1] + struct.pack('>f', hiding_time)[3:1:-1] # Mid-Big Endian float for some reason?
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Crewmate Vision
-    while not success_flag:
-        try:
-            crewmate_vision = input(f"{Fore.WHITE}Enter crewmate vision (float) or exit to return: {Fore.YELLOW}")
-            if crewmate_vision == "exit":
-                return None
-            try:
-                crewmate_vision = float(crewmate_vision)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid crewmate vision! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[17:21] = struct.pack('<f', crewmate_vision)
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Max Vent Uses
-    while not success_flag:
-        try:
-            vent_uses = input(f"{Fore.WHITE}Enter vent uses count (uint, max 255) or exit to return: {Fore.YELLOW}")
-            if vent_uses == "exit":
-                return None
-            try:
-                vent_uses = uint(vent_uses)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid vent uses count! Must be a positive non-floating number (uint).{Fore.WHITE}")
-                continue
-            hex_data[29] = vent_uses
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Max time in vent
-    while not success_flag:
-        try:
-            max_vent_time = input(f"{Fore.WHITE}Enter max time in vent (float, note: may be incorrect due to among us rounding) or exit to return: {Fore.YELLOW}")
-            if max_vent_time == "exit":
-                return None
-            try:
-                max_vent_time = float(max_vent_time)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid max time in vent! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[67:71] = struct.pack('>f', max_vent_time)[1::-1] + struct.pack('>f', max_vent_time)[3:1:-1] # Mid-Big Endian float for some reason again
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Crewmate Flashlight Size
-    while not success_flag:
-        try:
-            crewmate_flashlight_size = input(f"{Fore.WHITE}Enter crewmate flashlight size (float) or exit to return: {Fore.YELLOW}")
-            if crewmate_flashlight_size == "exit":
-                return None
-            try:
-                crewmate_flashlight_size = float(crewmate_flashlight_size)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid crewmate flashlight size! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[37:41] = struct.pack('<f', crewmate_flashlight_size)
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Impostor Flashlight Size
-    while not success_flag:
-        try:
-            impostor_flashlight_size = input(f"{Fore.WHITE}Enter impostor flashlight size (float) or exit to return: {Fore.YELLOW}")
-            if impostor_flashlight_size == "exit":
-                return None
-            try:
-                impostor_flashlight_size = float(impostor_flashlight_size)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid impostor flashlight size! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[41:45] = struct.pack('<f', impostor_flashlight_size)
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Impostor Vision
-    while not success_flag:
-        try:
-            impostor_vision = input(f"{Fore.WHITE}Enter impostor vision (float) or exit to return: {Fore.YELLOW}")
-            if impostor_vision == "exit":
-                return None
-            try:
-                impostor_vision = float(impostor_vision)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid impostor vision! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[21:25] = struct.pack('<f', impostor_vision)
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Final Hide Time
-    while not success_flag:
-        try:
-            final_time = input(f"{Fore.WHITE}Enter final hide time (float, note: may be incorrect due to among us rounding) or exit to return: {Fore.YELLOW}")
-            if final_time == "exit":
-                return None
-            try:
-                final_time = float(final_time)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid final hide time! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[47:51] = struct.pack('<f', final_time)
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Final Hide Impostor Speed
-    while not success_flag:
-        try:
-            impostor_speed = input(f"{Fore.WHITE}Enter final hide impostor speed (float) or exit to return: {Fore.YELLOW}")
-            if impostor_speed == "exit":
-                return None
-            try:
-                impostor_speed = float(impostor_speed)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid final hide impostor speed! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[51:55] = struct.pack('<f', impostor_speed)
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Ping Interval
-    while not success_flag:
-        try:
-            ping_interval = input(f"{Fore.WHITE}Enter ping interval (float) or exit to return: {Fore.YELLOW}")
-            if ping_interval == "exit":
-                return None
-            try:
-                ping_interval = float(ping_interval)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid ping interval! Must be a floating number (float).{Fore.WHITE}")
-                continue
-            hex_data[63:67] = struct.pack('>f', ping_interval)[1::-1] + struct.pack('>f', ping_interval)[3:1:-1] # I guess almost every seconds setting in hide n seek is Mid-Big Endian float
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Common Tasks
-    while not success_flag:
-        try:
-            common_tasks = input(f"{Fore.WHITE}Enter common tasks count (uint, max 255, note: settings this value to more than the number of total common tasks on the map will result in completing the same task for several times) or exit to return: {Fore.YELLOW}")
-            if common_tasks == "exit":
-                return None
-            try:
-                common_tasks = uint(common_tasks)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid common tasks count! Must be a positive non-floating number (uint).{Fore.WHITE}")
-                continue
-            hex_data[25] = common_tasks
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Long Tasks
-    while not success_flag:
-        try:
-            long_tasks = input(f"{Fore.WHITE}Enter long tasks count (uint, max 255, note: settings this value to more than the number of total long tasks on the map will result in completing the same task for several times) or exit to return: {Fore.YELLOW}")
-            if long_tasks == "exit":
-                return None
-            try:
-                long_tasks = uint(long_tasks)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid long tasks count! Must be a positive non-floating number (uint).{Fore.WHITE}")
-                continue
-            hex_data[26] = long_tasks
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
-
-    # Short Tasks
-    while not success_flag:
-        try:
-            short_tasks = input(f"{Fore.WHITE}Enter short tasks count (uint, max 255, note: settings this value to more than the number of total short tasks on the map will result in completing the same task for several times) or exit to return: {Fore.YELLOW}")
-            if short_tasks == "exit":
-                return None
-            try:
-                short_tasks = uint(short_tasks)
-            except:
-                print(f"{Fore.RED}ERROR - Invalid short tasks count! Must be a positive non-floating number (uint).{Fore.WHITE}")
-                continue
-            hex_data[27] = short_tasks
-            success_flag = True
-        except Exception as e:
-            print(f"{Fore.RED}ERROR - Unexpected error occurred: {e}{Fore.WHITE}")
-            continue
-    success_flag = False
+    # Basic settings
+    for key, info in hns_data.items():
+        res = set_data(hex_data, info["prompt"], info["error_prompt"], info["type"], info["byte1"], info["byte2"])
+        if res is None:
+            return None
 
     return hex_data.hex()
 
 def main():
-    print()
-    print()
-    print(f"{Fore.YELLOW}1. Modify normal Among Us hex{Fore.WHITE}")
-    print(f"{Fore.YELLOW}2. Modify Hide n Seek Among Us hex{Fore.WHITE}")
-    print(f"{Fore.YELLOW}3. Encode modified hex to Base64{Fore.WHITE}")
-    print(f"{Fore.YELLOW}4. Decode Base64 to hex{Fore.WHITE}")
-    print(f"{Fore.YELLOW}5. Exit{Fore.WHITE}")
-    choice = input(f"{Fore.WHITE}Choose an option: {Fore.YELLOW}")
+    while True:
+        print()
+        print()
+        print(f"{Fore.YELLOW}1. Modify normal Among Us hex{Fore.WHITE}")
+        print(f"{Fore.YELLOW}2. Modify Hide n Seek Among Us hex{Fore.WHITE}")
+        print(f"{Fore.YELLOW}3. Encode modified hex to Base64{Fore.WHITE}")
+        print(f"{Fore.YELLOW}4. Decode Base64 to hex{Fore.WHITE}")
+        print(f"{Fore.YELLOW}5. Exit{Fore.WHITE}")
+        choice = input(f"{Fore.WHITE}Choose an option: {Fore.YELLOW}")
 
-    if choice.lower() == "1":
-        hex_output = modify_normal_among_us_hex(reference_hex)
-        if hex_output is None: main()
-        print(f"Base64 output: {encode_base64(hex_output)} \nHex output (advanced): {hex_output}")
-        main()
-    elif choice.lower() == "2":
-        hex_output = modify_hide_n_seek_among_us_hex(hide_n_seek_ref_hex)
-        if hex_output is None: main()
-        print(f"Base64 output: {encode_base64(hex_output)} \nHex output (advanced): {hex_output}")
-        main()
-    elif choice.lower() == "3":
-        encode_base64(None)
-        main()
-    elif choice.lower() == "4":
-        decode_base64(None)
-        main()
-    elif choice.lower() == "5":
-        quit()
-    else:
-        print(f"{Fore.RED}Invalid option!{Fore.WHITE}")
-        main()
+        if choice.lower() == "1":
+            hex_output = modify_normal_among_us_hex(reference_hex)
+            if hex_output is None: continue
+            print(f"Base64 output: {process_data(hex_output, "encode")} \nHex output (advanced): {hex_output}")
+        elif choice.lower() == "2":
+            hex_output = modify_hide_n_seek_among_us_hex(hide_n_seek_ref_hex)
+            if hex_output is None: continue
+            print(f"Base64 output: {process_data(hex_output, "encode")} \nHex output (advanced): {hex_output}")
+        elif choice.lower() == "3":
+            process_data(None, "encode")
+        elif choice.lower() == "4":
+            process_data(None, "decode")
+        elif choice.lower() == "5":
+            quit()
+        else:
+            print(f"{Fore.RED}Invalid option!{Fore.WHITE}")
 
 if __name__ == "__main__":
     print(pyfiglet.figlet_format("Among Us Limit Bypasser", font="modular"))
