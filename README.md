@@ -24,7 +24,7 @@ An Among Us tool created with Python that allows bypassing settings limits in lo
 
 🟢 Hide N Seek generator mode support
 
-🟡 Normal generator mode roles support
+🟢 Normal generator mode roles support
 
 🔴 Compatibility for all platforms
 
@@ -57,7 +57,7 @@ pip install -r requirements.txt
 ```
 This will install all dependencies. **Make sure you allowed file access for your IDE or else it won't work!** If for some reason the method above doesn't work or you didn't allow file access for your IDE, install all libraries separately:
 ```bash
-pip install colorama pyfiglet
+pip install colorama pyfiglet flask pywebview
 ```
 2️⃣. Run the "main.py" file in your IDE and type settings generator mode (1 - normal game, 2 - hide n seek (coming soon)).
 
