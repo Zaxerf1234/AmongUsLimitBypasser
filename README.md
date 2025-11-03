@@ -36,7 +36,7 @@ Steam guide: https://steamcommunity.com/sharedfiles/filedetails/?id=3537222815
 
 1️⃣. Go to [releases](https://github.com/Zaxerf1234/AmongUsLimitBypasser/releases) tab and download release that fits your Among Us version and unzip the zip file (note: releases for older versions won't be supported if there's a completely new hex arrangement in the new versions) or build one yourself from the source code.
 
-2️⃣. Launch "Among Us Limit Bypasser.exe" file and type settings generator mode (1 - normal game, 2 - hide n seek (coming soon)).
+2️⃣. Launch "Among Us Limit Bypasser.exe" file and enter settings generator mode (1 - normal game, 2 - hide n seek).
 
 3️⃣. Fill each setting line with value you want to use for that setting.
 
@@ -45,7 +45,7 @@ Steam guide: https://steamcommunity.com/sharedfiles/filedetails/?id=3537222815
 5️⃣. Launch the game and host a local or online lobby to see the changes. Enjoy!
 
 ## 📱 Android
-0️⃣. Go to /storage/emulated/0/Android/data/com.innersloth.spacemafia/files/ path in your android file explorer (if your explorer doesn't allow you to go to the "data" folder, install an external explorer from google play market or whatever and give it permission to view system folders). Now backup the "settings.amogus" file to another folder (that is needed for you to recover the file if you mess up with base64. You can still reinstall the game if you don't create one).
+0️⃣. Go to /storage/emulated/0/Android/data/com.innersloth.spacemafia/files/ path in your android file explorer (if your explorer doesn't allow you to go to the "data" folder, install an external explorer from google play market or any other app store and give it permission to view system folders). Now backup the "settings.amogus" file to another folder (that is needed for you to recover the file if you mess up with base64. You can still reinstall the game if you don't create one).
 
 1️⃣. Install a Python IDE for android that supports pip such as Pydroid. Then go to [releases](https://github.com/Zaxerf1234/AmongUsLimitBypasser/releases) tab, choose release that fits your Among Us version (note: releases for older versions won't be supported if there's a completely new hex arrangement in the new versions) and download "Source code (zip)". It will download you a zip file with the source code. Now open your IDE console and run: 
 ```bash
@@ -59,7 +59,7 @@ This will install all dependencies. **Make sure you allowed file access for your
 ```bash
 pip install colorama pyfiglet flask pywebview
 ```
-2️⃣. Run the "main.py" file in your IDE and type settings generator mode (1 - normal game, 2 - hide n seek (coming soon)).
+2️⃣. Run the "main.py" file in your IDE and type settings generator mode (1 - normal game, 2 - hide n seek).
 
 3️⃣. Fill each setting line with value you want to use for that setting.
 
